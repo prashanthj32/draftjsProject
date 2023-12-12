@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, {useState } from 'react';
 import { Editor, EditorState, Modifier, RichUtils, convertToRaw, getDefaultKeyBinding } from 'draft-js';
 import 'draft-js/dist/Draft.css';
 import './App.css'
-import { stateToHTML } from 'draft-js-export-html';
 import { CKEditor } from '@ckeditor/ckeditor5-react';
-import ClassicEditor from '@ckeditor/ckeditor5-build-classic';
+import DecoupledEditor from '@ckeditor/ckeditor5-build-decoupled-document';
+import { convertToHTML } from 'draft-convert';
+
 
 const RichEditorExample = () => {
     const [editorState, setEditorState] = useState(() => EditorState.createEmpty());
@@ -26,13 +27,36 @@ const RichEditorExample = () => {
     };
 
     const captureData = () => {
-        const contentState = editorState.getCurrentContent();
-        const rawContentState = convertToRaw(contentState);
-        console.log(rawContentState, contentState);
 
-        const html = stateToHTML(contentState);
-        setHtmlData(html);
-        console.log('Captured Data (HTML):', html);
+
+        const htmlResult = convertToHTML({
+            styleToHTML: (style) => {
+                if (style === 'red') {
+                    return <span style={{ color: 'rgba(255, 0, 0, 1.0)' }} />;
+                }else if(style === 'orange'){
+                    return <span style={{ color: 'rgba(255, 127, 0, 1.0)' }} />;
+                }else if(style === 'yellow'){
+                    return <span style={{ color: 'rgba(180, 180, 0, 1.0)' }} />;
+                }else if(style === 'green'){
+                    return <span style={{ color: 'rgba(0, 180, 0, 1.0)' }} />;
+                }else if(style === 'blue'){
+                    return <span style={{ color: 'rgba(0, 0, 255, 1.0)' }} />;
+                }else if(style === 'indigo'){
+                    return <span style={{ color: 'rgba(75, 0, 130, 1.0)' }} />;
+                }else if(style === 'violet'){
+                    return <span style={{ color: 'rgba(127, 0, 225, 1.0)' }} />;
+                }
+                else{
+                    return <span style={{ color: 'black' }} />;
+
+                }
+
+            },
+        })(editorState.getCurrentContent());
+
+
+        setHtmlData(htmlResult);
+
     };
 
     const mapKeyToEditorCommand = (e) => {
@@ -51,19 +75,18 @@ const RichEditorExample = () => {
     };
 
     const toggleInlineStyle = (inlineStyle) => {
-        console.log(inlineStyle, editorState);
         setEditorState(RichUtils.toggleInlineStyle(editorState, inlineStyle));
     };
 
     // Custom overrides for "code" style.
-    const styleMap = {
-        CODE: {
-            backgroundColor: 'rgba(0, 0, 0, 0.05)',
-            fontFamily: '"Inconsolata", "Menlo", "Consolas", monospace',
-            fontSize: 16,
-            padding: 2,
-        },
-    };
+    // const styleMap = {
+    //     CODE: {
+    //         backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    //         fontFamily: '"Inconsolata", "Menlo", "Consolas", monospace',
+    //         fontSize: 16,
+    //         padding: 2,
+    //     },
+    // };
 
     const getBlockStyle = (block) => {
         switch (block.getType()) {
@@ -132,15 +155,52 @@ const RichEditorExample = () => {
             <div>
                 <h2>CKEditor 5 Example</h2>
                 <CKEditor
-                    editor={ClassicEditor}
+                    editor={DecoupledEditor}
                     data={htmlData}
+                    onReady={editor => {
+                        // You can store the "editor" and use when it is needed.
+                        editor.ui
+                            .getEditableElement()?.parentElement.insertBefore(
+                                editor.ui.view.toolbar.element,
+                                editor.ui.getEditableElement()
+                            );
+                    }}
                     onInit={(editor) => {
                         // You can listen to the editor initialization here
-                        console.log('Editor is ready to use!', editor);
                     }}
                     onChange={(event, editor) => {
                         const data = editor.getData();
-                        console.log({ event, editor, data });
+                    }}
+                    config={{
+                        toolbar: [
+                            'heading',
+                            '|',
+                            'bold',
+                            'italic',
+                            'fontColor',
+                            'fontSize', // Add FontSize button to the toolbar
+                            '|',
+                            'bulletedList',
+                            'numberedList',
+                            'alignment',
+                            '|',
+                            'link',
+                            'undo',
+                            'redo',
+                            '|',
+                            'color', // Add Color button to the toolbar
+                        ],
+                        heading : {
+                            options: [
+                                { model: 'paragraph', title: 'Paragraph', class: 'ck-heading_paragraph' },
+                                { model: 'heading1', view: 'h1', title: 'Heading 1', class: 'ck-heading_heading1' },
+                                { model: 'heading2', view: 'h2', title: 'Heading 2', class: 'ck-heading_heading2' },
+                                { model: 'heading3', view: 'h3', title: 'Heading 3', class: 'ck-heading_heading3' },
+                                { model: 'heading4', view: 'h4', title: 'Heading 4', class: 'ck-heading_heading4' },
+                                { model: 'heading5', view: 'h5', title: 'Heading 5', class: 'ck-heading_heading5' },
+                                { model: 'heading6', view: 'h6', title: 'Heading 6', class: 'ck-heading_heading6' }
+                            ]
+                        }
                     }}
                 />
             </div>
